@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile # Ou o caminho para o Dockerfile específico
+    container_name: myapp
+    command: python main.py
