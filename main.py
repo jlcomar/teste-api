@@ -1,4 +1,4 @@
-puts 'hello world'
+print("Hello World")
 
 a = 2
 
