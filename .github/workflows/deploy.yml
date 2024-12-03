@@ -1,4 +1,4 @@
-name: Python CI/CD
+name: Docker CI/CD Pipeline
 
 on:
   push:
@@ -9,62 +9,59 @@ on:
       - main
 
 jobs:
-  test:
+  test_service1:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Build and test service1
+        run: |
+          docker build -f service1/Dockerfile -t service1:latest ./service1
+          docker run service1:latest python -m unittest discover -s service1/tests
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install --upgrade pip pytest
-
-      - name: Run tests
-        run: python main.py
-
-  build:
-    needs: test  # Só será executado se os testes passarem
+  test_service2:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Build and test service2
+        run: |
+          docker build -f service2/Dockerfile -t service2:latest ./service2
+          docker run service2:latest python -m unittest discover -s service2/tests
 
+  build_and_push:
+    needs: [test_service1, test_service2]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build Docker image
+      - name: Build and push service1 image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/myapp:latest .
-
-      - name: Push Docker image
+          docker build -f service1/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/service1:latest ./service1
+          docker push ${{ secrets.DOCKER_USERNAME }}/service1:latest
+      - name: Build and push service2 image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+          docker build -f service2/Dockerfile -t ${{ secrets.DOCKER_USERNAME }}/service2:latest ./service2
+          docker push ${{ secrets.DOCKER_USERNAME }}/service2:latest
 
   deploy:
-    needs: build  # Executa o deploy somente após o job "build"
+    needs: build_and_push
     runs-on: ubuntu-latest
-
     steps:
-      - name: SSH to Server and Deploy Container
+      - name: SSH to server and deploy containers
         env:
           HOST: ${{ secrets.REMOTE_HOST }}
           USER: ${{ secrets.REMOTE_USER }}
           PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          IMAGE: ${{ secrets.DOCKER_USERNAME }}/myapp:latest
         run: |
           echo "${PRIVATE_KEY}" > private_key.pem
           chmod 600 private_key.pem
           scp -i private_key.pem docker-compose.yml ${USER}@${HOST}:~/deploy/
           ssh -i private_key.pem ${USER}@${HOST} "
-            docker pull ${IMAGE} &&
             docker-compose -f ~/deploy/docker-compose.yml up -d --force-recreate
           "
