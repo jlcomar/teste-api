@@ -65,3 +65,4 @@ jobs:
           ssh -i private_key.pem ${USER}@${HOST} "
             docker-compose -f ~/deploy/docker-compose.yml up -d --force-recreate
           "
+   
