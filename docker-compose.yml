@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  fastapi-app:
+    build: ./service1
+    container_name: fastapi-app
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/pedido
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  pedido-service:
+    build: ./service2
+    container_name: pedido-service
+    ports:
+      - "8081:8080"
+    environment:
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/pedido
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  cliente-service:
+    build: ./service3
+    container_name: cliente-service
+    ports:
+      - "8082:8080"
+    environment:
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/cliente
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  db:
+    image: mysql:5.7
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: pedido
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+volumes:
+  mysql-data:
+
+networks:
+  app-network:
+    driver: bridge

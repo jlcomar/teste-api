@@ -25,7 +25,8 @@ jobs:
       - name: Build and test ${{ matrix.service }}
         run: |
           docker build -f ${{ matrix.service }}/Dockerfile -t ${{ matrix.service }}:latest ./${{ matrix.service }}
-          docker run ${{ matrix.service }}:latest python -m unittest discover -s ${{ matrix.service }}/tests
+          docker run ${{ matrix.service }}:latest pip install pytest  # Instala o pytest
+          docker run ${{ matrix.service }}:latest pytest ./${{ matrix.service }}/tests  # Executa pytest nos testes
 
   build_and_push:
     needs: test_services
